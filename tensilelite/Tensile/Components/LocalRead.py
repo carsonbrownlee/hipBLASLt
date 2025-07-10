@@ -595,7 +595,7 @@ class LocalReadMFMA(LocalRead):
                                             incOffset = 48
                                 incOffset = rIdx * numElementPerRead * UnrollStride + incOffset
                                 offset_val = (incOffset + offset_val + tP["localReadOffset"]) * tP["bpeDS"]
-                            elif kernel["UseF32XEmulation"]: #TODOBS: Check this logic
+                            elif kernel["UseF32XEmulation"] and kernel["MatrixInstK"] > 16: #TODOBS: Check this logic
                                 incOffset = 0
                                 midIdx = numReadsPerUnroll // 2
                                 if rIdx >= midIdx:

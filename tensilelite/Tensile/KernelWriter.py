@@ -587,7 +587,10 @@ class KernelWriter(metaclass=abc.ABCMeta):
     localWriteCode       = self.codes.perIterLocalWrite[iteration][1]
     isBarrier            = kernel["LoopIters"] - self.states.numItersPLR
     hasLocalRead = countLocalRead(localReadCode)
+    self.states.scheduleIterAlg = 0
+    kernel["ScheduleIterAlg"] = 0
     # Default schedule is other, local reads, then local writes:
+    print("Carson: \n\n\n\"" + str(macIterCode) + "\"\n\n\n\n")
     if self.states.scheduleIterAlg==0:
       # simple schedule, just add the modules in-order
       iterCode.add(globalReadCode)
@@ -686,6 +689,7 @@ class KernelWriter(metaclass=abc.ABCMeta):
           packItems += packINtems.pop(0)
 
       macIterItems = macIterCode.flatitems()
+      print("\n\n\nmacIterItems: " + str(macIterItems) + "\n\n\n")
       # pop the first code which is s_nop 1 for packing
       item = macIterItems.pop(0) if isinstance(macIterItems[0], SNop) else None
 
@@ -1010,8 +1014,11 @@ class KernelWriter(metaclass=abc.ABCMeta):
         for vacancy in self.localReadsVacancy:
           # {"items","latencyLeft","atIter","atMfmaIndex","noReadsAtThisIter"}
           for localRead in list(localReadItemsThisLoop):
-            if vacancy["latencyLeft"] >= localRead.issueLatency() * 2:
-              vacancy["latencyLeft"] -= localRead.issueLatency() * 2
+            issueLatency = 0
+            if (hasattr(localRead, "issueLatency")):
+              issueLatency = localRead.issueLatency()
+            if vacancy["latencyLeft"] >= issueLatency * 2:
+              vacancy["latencyLeft"] -= issueLatency * 2
               vacancy["items"].add(localRead)
               localReadItemsThisLoop.remove(localRead)
               if vacancy["atMfmaIndex"] > self.states.sync1LdsMfmaIndex and kernel["1LDSBuffer"]:
@@ -1139,7 +1146,7 @@ class KernelWriter(metaclass=abc.ABCMeta):
             for j in range(len(localReadItemsThisLoop)):
               if (hasattr(localReadItemsThisLoop[j], "issueLatency")):
                 latencyLeft -= localReadItemsThisLoop[j].issueLatency()*2
-                readLeftLROPT += 1 if latencyLeft >= 0 else 0
+              readLeftLROPT += 1 if latencyLeft >= 0 else 0
             # at least 1 instruction
             readLeftLROPT = max(readLeftLROPT,1)
             # evenly schedule localread with each mfma
@@ -1157,6 +1164,9 @@ class KernelWriter(metaclass=abc.ABCMeta):
           elif kernel["EnableMatrixInstruction"] and self.do["OptimizeNumItersPLR0"]:
             # if numItersPLR == 0, try to schedule local reads with instruction level prefetch.
             mfmas = getMFMAs(macIterCode)
+            #CarsonTODO: add emulation check
+        # print("\n\n\n\nCarson: Item: " + str(item) + "\n\n\n\n")
+            # mfmas = macIterCode
             if i + 1 != numMfmaPerIter:
               numLocalReadShouldSchedule = 0
               # prefetch load for next wave tile along M since we re-use B first.
@@ -1322,7 +1332,7 @@ class KernelWriter(metaclass=abc.ABCMeta):
           for j in range(len(localReadItemsNextLoop)):
             if (hasattr(localReadItemsNextLoop[j], "issueLatency")):
               latencyLeft -= localReadItemsNextLoop[j].issueLatency()*2
-              readLeftLROPT += 1 if latencyLeft >= 0 else 0
+            readLeftLROPT += 1 if latencyLeft >= 0 else 0
           # at least 1 instruction
           readLeftLROPT = max(readLeftLROPT,1)
           readLeftLREven = numReadsInst / (numMfmaPerIter - i)

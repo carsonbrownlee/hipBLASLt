@@ -277,15 +277,6 @@ class F32XEmulationMFMA(F32XEmulation):
             tmp2 = "Cvt+1"
             aIndex = aStart + str(itr * 4)
             bIndex = bStart + str(itr * 4)
-            if kernel["EnableF32XEmulationLds"]:
-                None
-                #tf32mod.add(SNop(waitState=1020, comment="1 wait states for ds_read"))
-                #tf32mod.add(SWaitCnt(lgkmcnt=0, comment="wait for lds read"))
-                #tf32mod.add(TextBlock("/*acc = bf16ALow * bf16BHigh*/\n"))
-                #(src0, src1) = (vgpr("Cvt+2",2), vgpr(aStart + "+2",2))
-                #tf32mod.add(MFMAInstruction(instType=InstType.INST_BF16, accType=miOutInstType, variant=variant, mfma1k=mfma_1k, \
-                #                    acc=acc, a=src0, b=src1, acc2=acc2, neg=neg_flag))
-                #tf32mod.add(SWaitCnt(lgkmcnt=0, comment="wait for lds read"))
             if not kernel["EnableF32XEmulationLds"]:
                 tf32mod.add(TextBlock("/*bf16ALow = A - float32(bf16AHigh)*/\n"))
                 tf32mod.add(VCvtBF16toFP32(dst=vgpr(tmp1), src=vgpr(aHigh1), vgprMask=None, vi=0))
